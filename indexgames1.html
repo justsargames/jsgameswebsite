@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+</body>
+<meta charset="UTF-8">
+<title>Snail Adventure</title>
+
+
+<style>
+
+
+body{
+margin:0;
+overflow:hidden;
+font-family:Arial;
+background:linear-gradient(#87ceeb,#d0f4ff);
+}
+
+/* AREA GAME */
+
+#game{
+width:100%;
+height:400px;
+position:relative;
+overflow:hidden;
+}
+
+/* HUTAN */
+
+#forest{
+position:absolute;
+bottom:70px;
+width:200%;
+height:200px;
+background:linear-gradient(#2e7d32,#66bb6a);
+animation:forestMove 20s linear infinite;
+z-index:1;
+}
+
+@keyframes forestMove{
+from{transform:translateX(0)}
+to{transform:translateX(-50%)}
+}
+
+/* TANAH */
+
+#ground{
+position:absolute;
+bottom:0;
+width:100%;
+height:70px;
+background:#3fa34d;
+z-index:2;
+}
+
+/* PLAYER */
+
+#player{
+position:absolute;
+bottom:90px;
+left:120px;
+font-size:50px;
+animation:walk .6s infinite alternate;
+z-index:100;
+}
+
+@keyframes walk{
+from{transform:translateY(0)}
+to{transform:translateY(-5px)}
+}
+
+/* MUSUH */
+
+.enemy{
+position:absolute;
+bottom:90px;
+font-size:28px;
+animation:enemyMove 4s linear infinite;
+z-index:50;
+}
+
+@keyframes enemyMove{
+from{right:-60px}
+to{right:110%}
+}
+
+/* COIN */
+
+.coin{
+position:absolute;
+bottom:150px;
+font-size:24px;
+animation:coinMove 5s linear infinite;
+z-index:50;
+}
+
+@keyframes coinMove{
+from{right:-50px}
+to{right:110%}
+}
+
+/* SCORE */
+
+#score{
+position:absolute;
+top:20px;
+left:20px;
+font-size:22px;
+font-weight:bold;
+color:#333;
+background:white;
+padding:8px 15px;
+border-radius:10px;
+}
+
+</style>
+</head>
+
+
+<body>
+
+<div id="game">
+
+<div id="score">Score: 0</div>
+
+<div id="forest"></div>
+
+<div id="player">🐌</div>
+
+<div id="ground"></div>
+
+</div>
+
+<script>
+
+const player = document.getElementById("player")
+const game = document.getElementById("game")
+const scoreText = document.getElementById("score")
+
+let jumping=false
+let score=0
+
+/* JUMP */
+
+function jump(){
+
+if(jumping) return
+
+jumping=true
+
+let pos=90
+
+let up=setInterval(()=>{
+
+if(pos>=200){
+clearInterval(up)
+
+let down=setInterval(()=>{
+
+if(pos<=90){
+clearInterval(down)
+jumping=false
+}else{
+pos-=5
+player.style.bottom=pos+"px"
+}
+
+},20)
+
+}else{
+
+pos+=5
+player.style.bottom=pos+"px"
+
+}
+
+},20)
+
+}
+
+document.addEventListener("keydown",e=>{
+if(e.code==="Space") jump()
+})
+
+document.addEventListener("touchstart",jump)
+
+/* SPAWN MUSUH */
+
+function spawnEnemy(){
+
+let enemy=document.createElement("div")
+enemy.classList.add("enemy")
+
+let monsters=["🐍","🦂","🐜","🕷"]
+
+enemy.innerHTML=monsters[Math.floor(Math.random()*monsters.length)]
+
+enemy.style.right="-50px"
+
+game.appendChild(enemy)
+
+let move=setInterval(()=>{
+
+let enemyRect=enemy.getBoundingClientRect()
+let playerRect=player.getBoundingClientRect()
+
+/* COLLISION */
+
+if(
+enemyRect.left < playerRect.right &&
+enemyRect.right > playerRect.left &&
+enemyRect.bottom > playerRect.top &&
+enemyRect.top < playerRect.bottom
+){
+
+alert("Game Over! Score: "+score)
+location.reload()
+
+}
+
+},20)
+
+setTimeout(()=>{
+enemy.remove()
+clearInterval(move)
+},4000)
+
+}
+
+setInterval(spawnEnemy,2000)
+
+/* SPAWN COIN */
+
+function spawnCoin(){
+
+let coin=document.createElement("div")
+coin.classList.add("coin")
+
+coin.innerHTML="🪙"
+
+coin.style.right="-50px"
+
+coin.style.bottom=(120+Math.random()*120)+"px"
+
+game.appendChild(coin)
+
+let move=setInterval(()=>{
+
+let coinRect=coin.getBoundingClientRect()
+let playerRect=player.getBoundingClientRect()
+
+if(
+coinRect.left < playerRect.right &&
+coinRect.right > playerRect.left &&
+coinRect.bottom > playerRect.top &&
+coinRect.top < playerRect.bottom
+){
+
+score+=10
+scoreText.innerHTML="Score: "+score
+
+coin.remove()
+clearInterval(move)
+
+}
+
+},20)
+
+setTimeout(()=>{
+coin.remove()
+clearInterval(move)
+},5000)
+
+}
+
+setInterval(spawnCoin,1500)
+
+</script>
+
+</body>
+</html>

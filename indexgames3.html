@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sky Jumper - Aman di Start</title>
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: sans-serif;
+  background: linear-gradient(to top, #87CEFA, #1E90FF);
+}
+
+#gameArea {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.cloud {
+  position: absolute;
+  width: 150px;
+  height: 80px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+#player {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0px; /* nanti di-set ke platform pertama */
+  transition: left 0.05s;
+}
+
+.platform {
+  position: absolute;
+  width: 100px;
+  height: 20px;
+  background: green;
+  border-radius: 5px;
+}
+.moving { background: orange; }
+
+#score {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 24px;
+  color: #fff;
+  text-shadow: 0 0 5px #000;
+}
+
+#gameOver {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  color: #ff0;
+  text-shadow: 0 0 10px #000;
+  display: none;
+  z-index: 100;
+}
+</style>
+</head>
+<body>
+<div id="gameArea">
+  <img id="player" src="skyjump.png" alt="Player">
+  <div id="score">Score: 0</div>
+  <div id="gameOver">GAME OVER!</div>
+</div>
+
+<script>
+const gameArea = document.getElementById('gameArea');
+const player = document.getElementById('player');
+const scoreEl = document.getElementById('score');
+const gameOverEl = document.getElementById('gameOver');
+
+let playerBottom = 0;  // nanti di-set ke platform pertama
+let playerLeft = window.innerWidth/2 - 25;
+let velocityY = 0;
+let gravity = 0.35;
+let platforms = [];
+let clouds = [];
+let score = 0;
+let isGameOver = false;
+let gravityActive = false; // mulai aman
+
+// spawn cloud background
+function spawnCloud() {
+  const cloud = document.createElement('div');
+  cloud.classList.add('cloud');
+  cloud.style.top = Math.random()*window.innerHeight*0.5 + 'px';
+  cloud.style.left = window.innerWidth + 'px';
+  cloud.speed = 0.3 + Math.random()*0.5;
+  gameArea.appendChild(cloud);
+  clouds.push(cloud);
+}
+
+// spawn platform
+function createPlatform(bottom, moving=false){
+  const plat = document.createElement('div');
+  plat.classList.add('platform');
+  if(moving) plat.classList.add('moving');
+  plat.style.bottom = bottom + 'px';
+  plat.style.left = Math.random()*(window.innerWidth-100) + 'px';
+  gameArea.appendChild(plat);
+  platforms.push({el: plat, moving, dir: Math.random()>0.5?1:-1});
+}
+
+// buat platform awal
+for(let i=0; i<10; i++){
+  createPlatform(i*120);
+}
+
+// set posisi player di platform pertama agar aman
+let firstPlatform = platforms[0].el;
+playerBottom = parseFloat(firstPlatform.style.bottom) + 20;
+player.style.bottom = playerBottom + 'px';
+
+// aktifkan gravity setelah 0.5 detik agar aman
+setTimeout(()=>{ gravityActive = true; }, 500);
+
+// kontrol player
+document.addEventListener('keydown',(e)=>{
+  if(isGameOver) return;
+  if(e.key === "ArrowLeft") playerLeft -= 25;
+  if(e.key === "ArrowRight") playerLeft += 25;
+  if(playerLeft < 0) playerLeft = 0;
+  if(playerLeft > window.innerWidth-50) playerLeft = window.innerWidth-50;
+  player.style.left = playerLeft + 'px';
+});
+
+// game loop
+function gameLoop(){
+  if(isGameOver) return;
+
+  if(gravityActive){
+    velocityY -= gravity;
+    playerBottom += velocityY;
+    player.style.bottom = playerBottom + 'px';
+  }
+
+  platforms.forEach(plat=>{
+    const platRect = plat.el.getBoundingClientRect();
+    const playerRect = player.getBoundingClientRect();
+    if(
+      playerRect.bottom > platRect.top &&
+      playerRect.bottom < platRect.top + 20 &&
+      playerRect.right > platRect.left &&
+      playerRect.left < platRect.right &&
+      velocityY < 0
+    ){
+      velocityY = 18;
+      score += 10;
+      scoreEl.textContent = "Score: " + score;
+    }
+
+    if(plat.moving){
+      let left = parseFloat(plat.el.style.left);
+      if(left <=0 || left >= window.innerWidth-100) plat.dir*=-1;
+      plat.el.style.left = left + plat.dir*2 + 'px';
+    }
+  });
+
+  if(playerBottom > window.innerHeight/2){
+    const diff = playerBottom - window.innerHeight/2;
+    playerBottom -= diff;
+    platforms.forEach(plat=>{
+      plat.el.style.bottom = parseFloat(plat.el.style.bottom)-diff + 'px';
+    });
+    clouds.forEach(cloud=>{
+      let left = parseFloat(cloud.style.left);
+      cloud.style.left = left - cloud.speed*5 + 'px';
+    });
+  }
+
+  if(Math.random() < 0.01) spawnCloud();
+  clouds.forEach((cloud,index)=>{
+    if(parseFloat(cloud.style.left) < -150){
+      cloud.remove();
+      clouds.splice(index,1);
+    }
+  });
+
+  platforms.forEach((plat,index)=>{
+    if(parseFloat(plat.el.style.bottom)<-20){
+      plat.el.remove();
+      platforms.splice(index,1);
+      createPlatform(window.innerHeight + Math.random()*50, Math.random()<0.3);
+    }
+  });
+
+  if(playerBottom < -50){
+    isGameOver = true;
+    gameOverEl.style.display = 'block';
+    setTimeout(()=> location.reload(),2000);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>

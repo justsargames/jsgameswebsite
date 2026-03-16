@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rocket Runner - Index</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: sans-serif;
+    background: linear-gradient(#0f0c29, #302b63, #24243e);
+  }
+
+  #gameArea {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Realistic neon buildings */
+  .building {
+    position: absolute;
+    bottom: 0;
+    width: 50px;
+    background: linear-gradient(to top, #0ff, #08f);
+    box-shadow: 0 0 15px #0ff;
+    border: 1px solid #08f;
+    animation: moveBuilding linear infinite;
+  }
+
+  .building::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 40px;
+    height: calc(100% - 10px);
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.3) 0px,
+      rgba(255,255,255,0.3) 10px,
+      transparent 10px,
+      transparent 20px
+    );
+    border-radius: 2px;
+    box-shadow: inset 0 0 5px rgba(255,255,255,0.2);
+  }
+
+  @keyframes moveBuilding {
+    from { left: 100%; }
+    to { left: -50px; }
+  }
+
+  /* Roket animasi */
+  #rocket {
+    position: absolute;
+    bottom: 100px;
+    left: 100px;
+    width: 80px;
+    z-index: 10;
+    transition: bottom 0.1s;
+  }
+  #rocket img {
+    width: 100%;
+    animation: rocketFlame 0.2s infinite alternate;
+  }
+  @keyframes rocketFlame {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(3px); }
+  }
+
+  /* Obstacles */
+  .obstacle {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: radial-gradient(circle, #ff0, #f00);
+    border-radius: 50%;
+  }
+
+  /* Coins */
+  .coin {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: radial-gradient(circle, #ff0, #ffc700);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  /* Score */
+  #score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 24px;
+    color: #0ff;
+    text-shadow: 0 0 5px #0ff;
+  }
+
+  /* Game Over text */
+  #gameOver {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 36px;
+    color: #ff0;
+    text-shadow: 0 0 10px #ff0;
+    display: none;
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+<div id="gameArea">
+  <div id="score">Score: 0</div>
+  <div id="rocket"><img src="roket.png" alt="Rocket"></div>
+  <div id="gameOver">GAME OVER!</div>
+</div>
+
+<script>
+const rocket = document.getElementById('rocket');
+const gameArea = document.getElementById('gameArea');
+const scoreEl = document.getElementById('score');
+const gameOverEl = document.getElementById('gameOver');
+
+let rocketBottom = 100;
+let score = 0;
+let obstacles = [];
+let coins = [];
+let isGameOver = false;
+
+// Kontrol roket
+document.addEventListener('keydown', (e) => {
+  if(isGameOver) return; // tidak bisa bergerak saat game over
+  if(e.key === "ArrowUp") rocketBottom += 30;
+  if(e.key === "ArrowDown") rocketBottom -= 30;
+  if(rocketBottom < 0) rocketBottom = 0;
+  if(rocketBottom > window.innerHeight - 80) rocketBottom = window.innerHeight - 80;
+  rocket.style.bottom = rocketBottom + 'px';
+});
+
+// Spawn obstacles
+function spawnObstacle() {
+  if(isGameOver) return;
+  const obs = document.createElement('div');
+  obs.classList.add('obstacle');
+  obs.style.left = window.innerWidth + 'px';
+  obs.style.top = Math.random() * (window.innerHeight - 50) + 'px';
+  gameArea.appendChild(obs);
+  obstacles.push(obs);
+}
+
+// Spawn coins
+function spawnCoin() {
+  if(isGameOver) return;
+  const coin = document.createElement('div');
+  coin.classList.add('coin');
+  coin.style.left = window.innerWidth + 'px';
+  coin.style.top = Math.random() * (window.innerHeight - 30) + 'px';
+  gameArea.appendChild(coin);
+  coins.push(coin);
+}
+
+// Spawn buildings
+function spawnBuilding() {
+  if(isGameOver) return;
+  const building = document.createElement('div');
+  building.classList.add('building');
+  const height = 80 + Math.random() * 200;
+  building.style.height = height + 'px';
+  building.style.left = window.innerWidth + 'px';
+  const speed = 5 + Math.random() * 5;
+  building.style.animationDuration = speed + 's';
+  gameArea.appendChild(building);
+}
+
+// Intervals
+setInterval(spawnObstacle, 2000);
+setInterval(spawnCoin, 3000);
+setInterval(spawnBuilding, 1000);
+
+// Game loop
+function gameLoop() {
+  if(isGameOver) return;
+
+  score += 1;
+  scoreEl.textContent = "Score: " + score;
+
+  // Obstacles
+  obstacles.forEach((obs, index) => {
+    obs.style.left = (parseInt(obs.style.left) - 6) + 'px';
+    const rocketRect = rocket.getBoundingClientRect();
+    const obsRect = obs.getBoundingClientRect();
+    if (!(rocketRect.right < obsRect.left ||
+          rocketRect.left > obsRect.right ||
+          rocketRect.bottom < obsRect.top ||
+          rocketRect.top > obsRect.bottom)) {
+      // Game Over
+      isGameOver = true;
+      gameOverEl.style.display = 'block';
+      setTimeout(() => location.reload(), 2000);
+    }
+    if(parseInt(obs.style.left) < -50) {
+      obs.remove();
+      obstacles.splice(index, 1);
+    }
+  });
+
+  // Coins
+  coins.forEach((coin, index) => {
+    coin.style.left = (parseInt(coin.style.left) - 6) + 'px';
+    const rocketRect = rocket.getBoundingClientRect();
+    const coinRect = coin.getBoundingClientRect();
+    if (!(rocketRect.right < coinRect.left ||
+          rocketRect.left > coinRect.right ||
+          rocketRect.bottom < coinRect.top ||
+          rocketRect.top > coinRect.bottom)) {
+      score += 50;
+      coin.remove();
+      coins.splice(index, 1);
+    }
+    if(parseInt(coin.style.left) < -50) {
+      coin.remove();
+      coins.splice(index, 1);
+    }
+  });
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
